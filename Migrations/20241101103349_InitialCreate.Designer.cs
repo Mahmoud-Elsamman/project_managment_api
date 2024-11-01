@@ -12,7 +12,7 @@ using ProjectManagementApp.Data;
 namespace ProjectManagementApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20241031055330_InitialCreate")]
+    [Migration("20241101103349_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -146,9 +146,16 @@ namespace ProjectManagementApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
 
-                    b.Property<string>("PasswordHash")
+                    b.Property<byte[]>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte[]>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Username")
                         .IsRequired()
@@ -156,22 +163,9 @@ namespace ProjectManagementApp.Migrations
 
                     b.HasKey("UserId");
 
+                    b.HasIndex("RoleId");
+
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("RoleUser", b =>
-                {
-                    b.Property<int>("RolesRoleId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UsersUserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("RolesRoleId", "UsersUserId");
-
-                    b.HasIndex("UsersUserId");
-
-                    b.ToTable("RoleUser");
                 });
 
             modelBuilder.Entity("ProjectManagementApp.Models.Project", b =>
@@ -204,24 +198,25 @@ namespace ProjectManagementApp.Migrations
                     b.Navigation("Project");
                 });
 
-            modelBuilder.Entity("RoleUser", b =>
+            modelBuilder.Entity("ProjectManagementApp.Models.User", b =>
                 {
-                    b.HasOne("ProjectManagementApp.Models.Role", null)
-                        .WithMany()
-                        .HasForeignKey("RolesRoleId")
+                    b.HasOne("ProjectManagementApp.Models.Role", "Role")
+                        .WithMany("Users")
+                        .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ProjectManagementApp.Models.User", null)
-                        .WithMany()
-                        .HasForeignKey("UsersUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("ProjectManagementApp.Models.Project", b =>
                 {
                     b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("ProjectManagementApp.Models.Role", b =>
+                {
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("ProjectManagementApp.Models.User", b =>

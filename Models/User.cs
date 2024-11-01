@@ -12,7 +12,10 @@ namespace ProjectManagementApp.Models
         public required string Username { get; set; }
 
         [Required]
-        public required string PasswordHash { get; set; }
+        public required byte[] PasswordHash { get; set; }
+
+        [Required]
+        public required byte[] PasswordSalt { get; set; }
 
         [Required]
         public int RoleId { get; set; }
