@@ -14,7 +14,9 @@ namespace ProjectManagementApp.Models
         public required string Description { get; set; }
 
         [Required]
-        public required string AssignedTo { get; set; } // Could link to a User in a more advanced setup
+        public int AssignedToId { get; set; }
+
+        public required User AssignedTo { get; set; }
 
         public DateTime StartDate { get; set; }
 

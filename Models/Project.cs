@@ -21,7 +21,9 @@ namespace ProjectManagementApp.Models
 
         public decimal Budget { get; set; }
 
-        public required string Owner { get; set; }
+        [Required]
+        public int OwnerId { get; set; }
+        public required User Owner { get; set; }
 
         public required string Status { get; set; } // Example statuses: "Not Started", "In Progress", "Completed"
 

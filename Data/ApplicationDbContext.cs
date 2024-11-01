@@ -15,7 +15,23 @@ namespace ProjectManagementApp.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            // Configure relationships and constraints here if needed
+
+            modelBuilder.Entity<Role>().HasData(
+                new Role { RoleId = 1, RoleName = "Manager" },
+                new Role { RoleId = 2, RoleName = "Employee" }
+            );
+
+            modelBuilder.Entity<Project>()
+                .HasOne(p => p.Owner)
+                .WithMany(u => u.ProjectsOwned) // Each user can own multiple projects
+                .HasForeignKey(p => p.OwnerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Models.Task>()
+                .HasOne(t => t.AssignedTo)
+                .WithMany(u => u.TasksAssigned) // Each user can have multiple tasks assigned
+                .HasForeignKey(t => t.AssignedToId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

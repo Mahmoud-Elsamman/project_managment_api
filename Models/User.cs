@@ -14,6 +14,12 @@ namespace ProjectManagementApp.Models
         [Required]
         public required string PasswordHash { get; set; }
 
-        public ICollection<Role> Roles { get; set; } = new List<Role>();
+        [Required]
+        public int RoleId { get; set; }
+
+        public required Role Role { get; set; }
+
+        public ICollection<Project> ProjectsOwned { get; set; } = new List<Project>(); // Projects owned by the user
+        public ICollection<Task> TasksAssigned { get; set; } = new List<Task>(); // Tasks assigned to the user
     }
 }
