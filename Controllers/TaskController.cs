@@ -23,15 +23,30 @@ namespace ProjectManagementApp.Controllers
         }
 
         [Authorize(Roles = "Manager, Employee")]
+        [HttpGet("project/{projectId}")]
+        public async Task<ActionResult<IEnumerable<Task>>> GetTasksByProject(int projectId)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "");
+
+            IQueryable<Task> query = _context.Tasks
+                .Where(t => t.ProjectId == projectId)
+                .Include(t => t.AssignedTo);
+
+            if (User.IsInRole("Employee"))
+            {
+                query = query.Where(t => t.AssignedToId == userId);
+            }
+
+            var tasks = await query.ToListAsync();
+            return tasks;
+        }
+
+        [Authorize(Roles = "Manager, Employee")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Task>>> GetTasks()
         {
-            var userClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userClaim == null)
-            {
-                return Unauthorized();
-            }
-            var userId = int.Parse(userClaim);
+
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "");
             var userRole = User.FindFirstValue(ClaimTypes.Role);
 
             if (userRole == "Employee")
@@ -56,12 +71,7 @@ namespace ProjectManagementApp.Controllers
                 return NotFound();
             }
 
-            var userClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userClaim == null)
-            {
-                return Unauthorized();
-            }
-            var userId = int.Parse(userClaim);
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "");
             var userRole = User.FindFirstValue(ClaimTypes.Role);
 
             if (userRole == "Employee" && task.AssignedToId != userId)
@@ -91,36 +101,22 @@ namespace ProjectManagementApp.Controllers
                 return BadRequest();
             }
 
-            var userClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userClaim == null)
+            var existingTask = await _context.Tasks.FindAsync(id);
+            if (existingTask == null)
             {
-                return Unauthorized();
+                return NotFound();
             }
-            var userId = int.Parse(userClaim);
-            var userRole = User.FindFirstValue(ClaimTypes.Role);
 
-            if (userRole == "Employee" && task.AssignedToId != userId)
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "");
+
+            if (User.IsInRole("Employee") && existingTask.AssignedToId != userId)
             {
                 return Forbid();
             }
 
-            _context.Entry(task).State = EntityState.Modified;
+            _context.Entry(existingTask).CurrentValues.SetValues(task);
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Tasks.Any(e => e.TaskId == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
@@ -139,6 +135,24 @@ namespace ProjectManagementApp.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        [Authorize(Roles = "Manager, Employee")]
+        [HttpGet("overdue")]
+        public async Task<ActionResult<IEnumerable<Task>>> GetOverdueTasks()
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "");
+
+            IQueryable<Task> query = _context.Tasks
+                .Where(t => t.EndDate < DateTime.Now && t.Status != "Completed");
+
+            if (User.IsInRole("Employee"))
+            {
+                query = query.Where(t => t.AssignedToId == userId);
+            }
+
+            var overdueTasks = await query.ToListAsync();
+            return overdueTasks;
         }
     }
 }
