@@ -23,7 +23,7 @@ namespace ProjectManagementApp.Models
 
         [Required]
         public int OwnerId { get; set; }
-        public required User Owner { get; set; }
+        public User? Owner { get; set; }
 
         public required string Status { get; set; } // Example statuses: "Not Started", "In Progress", "Completed"
 

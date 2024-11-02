@@ -1,3 +1,4 @@
+using ASP_core_API.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -5,6 +6,7 @@ using ProjectManagementApp.Data;
 using ProjectManagementApp.Models;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace ProjectManagementApp.Controllers
@@ -22,30 +24,39 @@ namespace ProjectManagementApp.Controllers
 
         [Authorize(Roles = "Manager, Employee")]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
+        public async Task<ActionResult<ServiceResponse<IEnumerable<Project>>>> GetProjects()
         {
-            return await _context.Projects.Include(p => p.Owner).ToListAsync();
+            ServiceResponse<IEnumerable<Project>> response = new ServiceResponse<IEnumerable<Project>>();
+
+            response.Data = await _context.Projects.ToListAsync();
+
+            return response;
         }
 
         [Authorize(Roles = "Manager, Employee")]
         [HttpGet("{id}")]
-        public async Task<ActionResult<Project>> GetProject(int id)
+        public async Task<ActionResult<ServiceResponse<Project>>> GetProject(int id)
         {
-            var project = await _context.Projects.Include(p => p.Owner).FirstOrDefaultAsync(p => p.ProjectId == id);
+            ServiceResponse<Project> serviceResponse = new ServiceResponse<Project>();
+            var project = await _context.Projects.FirstOrDefaultAsync(p => p.ProjectId == id);
 
             if (project == null)
             {
-                return NotFound();
+                serviceResponse.Success = false;
+                serviceResponse.Message = "Project not found.";
+                return NotFound(serviceResponse);
             }
 
-            return project;
+            serviceResponse.Data = project;
+            return serviceResponse;
         }
 
         [Authorize(Roles = "Manager")]
         [HttpPost]
         public async Task<ActionResult<Project>> CreateProject(Project project)
         {
-            _context.Projects.Add(project);
+
+            await _context.Projects.AddAsync(project);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetProject), new { id = project.ProjectId }, project);
@@ -53,11 +64,15 @@ namespace ProjectManagementApp.Controllers
 
         [Authorize(Roles = "Manager")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProject(int id, Project project)
+        public async Task<ActionResult> UpdateProject(int id, Project project)
         {
+            ServiceResponse<Project> serviceResponse = new ServiceResponse<Project>();
+
             if (id != project.ProjectId)
             {
-                return BadRequest();
+                serviceResponse.Success = false;
+                serviceResponse.Message = "Error in update project.";
+                return BadRequest(serviceResponse);
             }
 
             _context.Entry(project).State = EntityState.Modified;
@@ -70,7 +85,9 @@ namespace ProjectManagementApp.Controllers
             {
                 if (!_context.Projects.Any(e => e.ProjectId == id))
                 {
-                    return NotFound();
+                    serviceResponse.Success = false;
+                    serviceResponse.Message = "Project not found.";
+                    return NotFound(serviceResponse);
                 }
                 else
                 {
@@ -78,23 +95,31 @@ namespace ProjectManagementApp.Controllers
                 }
             }
 
-            return NoContent();
+            serviceResponse.Data = project;
+
+            return Ok(serviceResponse);
         }
 
         [Authorize(Roles = "Manager")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
+            ServiceResponse<List<Project>> serviceResponse = new ServiceResponse<List<Project>>();
+
             var project = await _context.Projects.FindAsync(id);
             if (project == null)
             {
-                return NotFound();
+                serviceResponse.Success = false;
+                serviceResponse.Message = "Project not found.";
+                return NotFound(serviceResponse);
             }
 
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            serviceResponse.Data = await _context.Projects.ToListAsync();
+
+            return Ok(serviceResponse);
         }
     }
 }
