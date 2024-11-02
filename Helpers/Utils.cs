@@ -14,5 +14,7 @@ namespace ProjectManagementApp.Helpers
             passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
         }
 
+
+
     }
 }

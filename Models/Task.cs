@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProjectManagementApp.Models
 {
@@ -16,7 +17,7 @@ namespace ProjectManagementApp.Models
         [Required]
         public int AssignedToId { get; set; }
 
-        public required User AssignedTo { get; set; }
+        public User? AssignedTo { get; set; }
 
         public DateTime StartDate { get; set; }
 
@@ -29,6 +30,10 @@ namespace ProjectManagementApp.Models
         [Required]
         public int ProjectId { get; set; }
 
-        public required Project Project { get; set; }
+        public Project? Project { get; set; }
+
+        [NotMapped]
+        public Boolean? IsOverdue { get; set; }
+
     }
 }

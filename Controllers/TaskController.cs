@@ -1,3 +1,4 @@
+using ASP_core_API.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,13 +25,15 @@ namespace ProjectManagementApp.Controllers
 
         [Authorize(Roles = "Manager, Employee")]
         [HttpGet("project/{projectId}")]
-        public async Task<ActionResult<IEnumerable<Task>>> GetTasksByProject(int projectId)
+        public async Task<ActionResult> GetTasksByProject(int projectId)
         {
+            ServiceResponse<IEnumerable<Task>> response = new ServiceResponse<IEnumerable<Task>>();
+
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "");
 
             IQueryable<Task> query = _context.Tasks
-                .Where(t => t.ProjectId == projectId)
-                .Include(t => t.AssignedTo);
+                .Where(t => t.ProjectId == projectId);
+
 
             if (User.IsInRole("Employee"))
             {
@@ -38,7 +41,14 @@ namespace ProjectManagementApp.Controllers
             }
 
             var tasks = await query.ToListAsync();
-            return tasks;
+            foreach (var t in tasks)
+            {
+                bool isOverdue = t.Status != "Completed" && t.EndDate < DateTime.UtcNow;
+                t.IsOverdue = isOverdue;
+            }
+
+            response.Data = tasks;
+            return Ok(response);
         }
 
         [Authorize(Roles = "Manager, Employee")]
@@ -64,11 +74,15 @@ namespace ProjectManagementApp.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Task>> GetTask(int id)
         {
-            var task = await _context.Tasks.Include(t => t.AssignedTo).FirstOrDefaultAsync(t => t.TaskId == id);
+            ServiceResponse<Task> serviceResponse = new ServiceResponse<Task>();
+
+            var task = await _context.Tasks.FirstOrDefaultAsync(t => t.TaskId == id);
 
             if (task == null)
             {
-                return NotFound();
+                serviceResponse.Success = false;
+                serviceResponse.Message = "Task not found.";
+                return NotFound(serviceResponse);
             }
 
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "");
@@ -76,10 +90,12 @@ namespace ProjectManagementApp.Controllers
 
             if (userRole == "Employee" && task.AssignedToId != userId)
             {
+
                 return Forbid();
             }
 
-            return task;
+            serviceResponse.Data = task;
+            return Ok(serviceResponse);
         }
 
         [Authorize(Roles = "Manager")]
@@ -96,15 +112,22 @@ namespace ProjectManagementApp.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(int id, Task task)
         {
+
+            ServiceResponse<Task> serviceResponse = new ServiceResponse<Task>();
+
             if (id != task.TaskId)
             {
-                return BadRequest();
+                serviceResponse.Success = false;
+                serviceResponse.Message = "Error in update task.";
+                return BadRequest(serviceResponse);
             }
 
             var existingTask = await _context.Tasks.FindAsync(id);
             if (existingTask == null)
             {
-                return NotFound();
+                serviceResponse.Success = false;
+                serviceResponse.Message = "Task not found";
+                return NotFound(serviceResponse);
             }
 
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "");
@@ -118,23 +141,29 @@ namespace ProjectManagementApp.Controllers
 
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            serviceResponse.Data = task;
+
+            return Ok(serviceResponse);
         }
 
         [Authorize(Roles = "Manager")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
+            ServiceResponse<List<Project>> serviceResponse = new ServiceResponse<List<Project>>();
+
             var task = await _context.Tasks.FindAsync(id);
             if (task == null)
             {
-                return NotFound();
+                serviceResponse.Success = false;
+                serviceResponse.Message = "Task not found.";
+                return NotFound(serviceResponse);
             }
 
             _context.Tasks.Remove(task);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(serviceResponse);
         }
 
         [Authorize(Roles = "Manager, Employee")]
