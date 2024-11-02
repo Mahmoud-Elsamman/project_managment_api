@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ProjectManagementApp.Helpers;
 using ProjectManagementApp.Models;
 
 namespace ProjectManagementApp.Data
@@ -14,12 +15,25 @@ namespace ProjectManagementApp.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            Utils.CreatePasswordHash("123456", out byte[] passwordHash, out byte[] passwordSalt);
+
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<Role>().HasData(
                 new Role { RoleId = 1, RoleName = "Manager" },
                 new Role { RoleId = 2, RoleName = "Employee" }
             );
+
+            modelBuilder.Entity<User>().HasData(
+               new User
+               {
+                   UserId = 1,
+                   Username = "admin",
+                   PasswordHash = passwordHash,
+                   PasswordSalt = passwordSalt,
+                   RoleId = 1
+               }
+           );
 
             modelBuilder.Entity<Project>()
                 .HasOne(p => p.Owner)
