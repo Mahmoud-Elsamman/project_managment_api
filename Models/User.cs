@@ -20,7 +20,7 @@ namespace ProjectManagementApp.Models
         [Required]
         public int RoleId { get; set; }
 
-        public required Role Role { get; set; }
+        public Role? Role { get; set; }
 
         public ICollection<Project> ProjectsOwned { get; set; } = new List<Project>(); // Projects owned by the user
         public ICollection<Task> TasksAssigned { get; set; } = new List<Task>(); // Tasks assigned to the user

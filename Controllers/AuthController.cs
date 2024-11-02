@@ -13,6 +13,7 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using ProjectManagementApp.Dtos.User;
 using ProjectManagementApp.Helpers;
+using ASP_core_API.Models;
 
 
 namespace ProjectManagementApp.Controllers
@@ -31,25 +32,32 @@ namespace ProjectManagementApp.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] UserLoginDto model)
+        public async Task<IActionResult> Login(UserLoginDto model)
         {
+            ServiceResponse<object> response = new ServiceResponse<object>();
+
             var user = await _context.Users
                 .Include(u => u.Role)
                 .SingleOrDefaultAsync(u => u.Username.ToLower().Equals(model.Username.ToLower()));
 
             if (user == null || !VerifyPasswordHash(model.Password, user.PasswordHash, user.PasswordSalt))
             {
-                return Unauthorized("Invalid username or password.");
+                response.Success = false;
+                response.Message = "Invalid username or password.";
+                return Unauthorized(response);
             }
-
-            var token = GenerateJwtToken(user);
-            return Ok(new { token });
+            else
+            {
+                var token = GenerateJwtToken(user);
+                response.Data = new { token, user = new { id = user.UserId, userName = user.Username, role = user.Role?.RoleName } };
+                return Ok(response);
+            }
         }
 
 
         [Authorize(Roles = "Manager")]
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] UserRegisterDto model)
+        public async Task<IActionResult> Register(UserRegisterDto model)
         {
             if (_context.Users.Any(u => u.Username.ToLower().Equals(model.Username.ToLower())))
                 return BadRequest("Username already exists.");
@@ -82,7 +90,7 @@ namespace ProjectManagementApp.Controllers
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.Role, user.Role.RoleName)
+                new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "")
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? string.Empty));
